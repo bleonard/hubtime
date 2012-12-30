@@ -1,3 +1,5 @@
+# -*- encoding : utf-8 -*-
+
 class Cacher
   def initialize(directory)
     root = File.join(File.dirname(__FILE__), "data", "cache")
@@ -12,7 +14,7 @@ class Cacher
   end
   
   def write(key, value)
-    file_name = File.join(@directory, sanitized_file_name_from(key) + ".yml")
+    file_name = File.join(@directory, sanitized_file_name_from(key))
     directory = File.dirname(file_name)
     FileUtils.mkdir_p(directory) unless File.exist?(directory)
     File.open(file_name, 'w') {|f| f.write(YAML.dump(value)) }
@@ -24,6 +26,7 @@ class Cacher
   def sanitized_file_name_from(file_name)
     parts = file_name.to_s.split('.')
     file_extension = '.' + parts.pop if parts.size > 1
-    parts.join('.').gsub(/[^\w\-\/]+/, '_') + file_extension.to_s
+    base = parts.join('.').gsub(/[^\w\-\/]+/, '_') + file_extension.to_s
+    "#{base}.yml"
   end
 end

@@ -35,7 +35,7 @@ command :graph do |c|
     raise("Need github user name. hubtime config --user USERNAME --token TOKEN") unless user
     
     activity = Activity.new(self, user, months)
-    activity.generate
+    activity.compile!
     
   end
 end
@@ -43,12 +43,15 @@ end
 command :table do |c|
   c.syntax = 'hubtime table [options]'
   c.summary = ''
-  c.description = 'Graph your time'
+  c.description = 'Table your time'
   c.example 'description', 'command example'
   c.option '--months INTEGER', 'How many months of history'
   c.option '--user USERNAME', 'How many months of history'
+  c.option '--unit (year|month|day)', 'Granularity of the results'
   c.action do |args, options|
     options.default :months => 12
+    options.default :unit => "month"
+    
     months = options.months.to_i
     months = 12 if months <= 0
     user = options.user
@@ -56,8 +59,33 @@ command :table do |c|
     raise("Need github user name. hubtime config --user USERNAME --token TOKEN") unless user
     
     activity = Activity.new(self, user, months)
-    activity.generate
-    puts activity.table
+    puts activity.table(options.unit)
+    
+  end
+end
+
+command :spark do |c|
+  c.syntax = 'hubtime spark [options]'
+  c.summary = ''
+  c.description = 'Graph your time'
+  c.example 'description', 'command example'
+  c.option '--months INTEGER', 'How many months of history'
+  c.option '--user USERNAME', 'How many months of history'
+  c.option '--unit (year|month|day)', 'Granularity of the results'
+  c.option '--data (count|impact|additions|deletions)', 'Type of results'
+  c.action do |args, options|
+    options.default :months => 12
+    options.default :unit => "month"
+    options.default :data => "impact"
+    
+    months = options.months.to_i
+    months = 12 if months <= 0
+    user = options.user
+    user ||= HubConfig.user
+    raise("Need github user name. hubtime config --user USERNAME --token TOKEN") unless user
+    
+    activity = Activity.new(self, user, months)
+    puts activity.spark(options.unit, options.data)
     
   end
 end

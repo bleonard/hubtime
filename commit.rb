@@ -1,3 +1,5 @@
+# -*- encoding : utf-8 -*-
+
 class Commit
   
   attr_reader :repo_name, :sha, :additions, :deletions, :committer, :time
@@ -14,7 +16,7 @@ class Commit
     "#{time.strftime('%F')} commit: #{repo_name} : #{sha} by #{committer} with #{additions} additions and #{deletions} deletions}"
   end
   
-  def total
+  def impact
     additions + deletions
   end
   

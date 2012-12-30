@@ -1,13 +1,14 @@
+# -*- encoding : utf-8 -*-
+
 class Activity
-  attr_reader :username, :start_time, :end_time
   
   class Period
-    attr_reader :example, :label, :compiled
+    attr_reader :example, :label, :compiled, :children
     def initialize(label, example_time=nil)
       @example = example_time
       @label = label
       @children = {}
-      @compiled = {}
+      @compiled = nil
     end
     
     def add(commit)
@@ -20,25 +21,55 @@ class Activity
       end
     end
     
+    def compiled?
+      !!@compiled
+    end
+    
     def compile!(parent)
+      return if compiled?
       first = nil
       last = nil
-      @compiled = {}
+      filled = {}
       child_keys(parent).each do |key|
-        @compiled[key] = @children[key]
-        if @compiled[key]
-          first ||= @compiled[key]
-          last = @compiled[key]
+        filled[key] = @children[key]
+        if filled[key]
+          first ||= filled[key]
+          last = filled[key]
         else
-          @compiled[key] = self.class.child_class.new(key)
+          filled[key] = self.class.child_class.new(key)
         end
       end
       
       first.first! if first
       last.last! if last
       
-      @compiled.values.each do |child|
+      filled.values.each do |child|
         child.compile!(self)
+      end
+      
+      @children = filled
+      
+      @compiled = { "additions" => 0, "deletions" => 0, "impact" => 0, "count" => 0 }
+      commits.each do |commit|
+        @compiled["additions"] += commit.additions
+        @compiled["deletions"] += commit.deletions
+        @compiled["impact"]     += commit.impact
+        @compiled["count"]     += 1
+      end
+      
+      @compiled["children"] = {}
+      @children.each do |key, period|
+        @compiled["children"][key] = period.compiled
+      end
+    end
+    
+    def import(stats)
+      child_list  = stats.delete("children")
+      @compiled = stats
+      @children = {}
+      child_list.each do |key, child_stats|
+        @children[key] = self.class.child_class.new(key)
+        @children[key].import(child_stats)
       end
     end
     
@@ -47,19 +78,19 @@ class Activity
     end
     
     def count
-      commits.size
+      @compiled["count"]
     end
     
     def additions
-      commits.sum(&:additions)
+      @compiled["additions"]
     end
     
     def deletions
-      commits.sum(&:deletions)
+      @compiled["deletions"]
     end
     
-    def total
-      commits.sum(&:total)
+    def impact
+      @compiled["impact"]
     end
     
     def first!
@@ -83,20 +114,22 @@ class Activity
       
       first = self._first_child_key(parent)
       last = self._last_child_key(parent)
+      puts first
+      puts last
       (first..last).to_a
     end
     
     def _first_child_key(parent)
-      if !parent || parent.first?
-        @children.keys.sort.first
+      if first? && (!parent || parent.first?) && children.keys.size > 0
+        children.keys.sort.first
       else
         first_child_key
       end
     end
     
     def _last_child_key(parent)
-      if !parent || parent.last?
-        @children.keys.sort.last
+      if last? && (!parent || parent.last?) && children.keys.size > 0
+        children.keys.sort.last
       else
         last_child_key
       end
@@ -105,11 +138,35 @@ class Activity
   
   class Forever < Period
     def self.display(time)
-      "Time"
+      "All"
     end
     
     def self.child_class
       Year
+    end
+    
+    attr_reader :cache_key
+    def initialize(cache_key)
+      @cache_key = cache_key
+      super(self.class.display(Time.zone.now), Time.zone.now)
+    end
+    
+    def self.cacher
+      @cacher ||= Cacher.new("activity")
+    end
+    
+    def self.load(username, start_time, end_time)
+      key = "#{username}/#{start_time.to_i}-#{end_time.to_i}"
+      out = self.new(key)
+      if stats = cacher.read(key)
+        out.import(stats)
+      end
+      out
+    end
+    
+    def store!
+      raise "not compiled" unless compiled?
+      self.class.cacher.write(cache_key, @compiled)
     end
     
     def first?
@@ -122,18 +179,18 @@ class Activity
     
     def each(unit, &block)
       unit = unit.to_s
-      if unit == "time"
-        yield "Time", self
+      if unit == "all"
+        yield "All", self
       else
-        self.compiled.each do |year_key, year|
+        self.children.each do |year_key, year|
           if unit == "year"
             yield "#{year_key}", year
           else
-            year.compiled.each do |month_key, month|
+            year.children.each do |month_key, month|
               if unit == "month"
                 yield "#{year_key}-#{month_key}", month
               else
-                month.compiled.each do |day_key, day|
+                month.children.each do |day_key, day|
                   yield "#{year_key}-#{month_key}-#{day_key}", day
                 end
               end
@@ -196,7 +253,7 @@ class Activity
     end
   end
   
-  
+  attr_reader :username, :start_time, :end_time
   def initialize(cli, username, num_months)
     Time.zone = "Pacific Time (US & Canada)"  # TODO: command to allow this being set
     @cli = cli
@@ -204,25 +261,56 @@ class Activity
     @start_time = num_months.months.ago.beginning_of_month
     @end_time = Time.zone.now.end_of_month
     
-    @time = Forever.new(Time.now)
+    @time = Forever.load(username, start_time, end_time)
   end
   
-  def generate
-    GithubService.owner.all_commits(username, start_time, end_time) do |commit|
-      puts commit.to_s
-      @time.add(commit)
+  def compile!
+    unless @time.compiled?
+      GithubService.owner.all_commits(username, start_time, end_time) do |commit|
+        @time.add(commit)
+      end
+      puts "... compiling data for #{username}"
+      @time.compile!(nil)
+      @time.store!
     end
-    puts "....compiling"
-    @time.compile!(nil)
   end
   
   def table(unit = :month)
-    table = Terminal::Table.new(:headings => [unit.to_s.titleize, 'Commits', 'Impact'])
+    compile!
+    table = Terminal::Table.new(:headings => [unit.to_s.titleize, 'Commits', 'Impact', 'Additions', 'Deletions'])
     
     @time.each(unit) do |label, period|
-      table.add_row [label, period.count, period.total]
+      table.add_row [label, period.count, period.impact, period.additions, period.deletions]
     end
     table
+  end
+  
+  def spark(unit = :month, type = :impact)
+    compile!
+    data = []
+    @time.each(unit) do |label, period|
+      data << period.send(type)
+    end
+    
+    ticks=%w[ ▁  ▂  ▃ ▄  ▅  ▆  ▇ ]
+
+    return "" if data.size == 0
+    return ticks.last if data.size == 1
+    
+    range = data.max - data.min
+    scale = ticks.length - 1
+    distance = data.max.to_f / ticks.size
+
+    str = ''
+    data.each do |val|
+      if val == 0
+        str << " "
+      else
+        tick = (val / distance).round - 1
+        str << ticks[tick]
+      end
+    end
+    str
   end
 
 end

@@ -1,3 +1,5 @@
+# -*- encoding : utf-8 -*-
+
 class HubConfig
   def self.instance
     @config ||= HubConfig.new
@@ -5,7 +7,7 @@ class HubConfig
   
   def self.auth(user, password)
     client = Octokit::Client.new(:login => user, :password => password)
-    response = client.create_authorization({:client_id => "a5657692d116ce4d155f", :client_secret => "4a4a8b9822b00b26ca586a364af5d5e49243c2a8",
+    response = client.create_authorization({:client_id => self.client_id, :client_secret => self.client_secret,
           :scopes => ["repo", "user"], :note => "Hubtime", :note_url=> "https://github.com/bleonard/hubtime"})
     raise "Error getting Github token" unless response["token"]
     store(user, response["token"])
@@ -25,6 +27,14 @@ class HubConfig
   
   def self.threads
     1
+  end
+  
+  def self.client_id
+    "fcb998c47db26c1e0339"
+  end
+  
+  def self.client_secret
+    "5687e5f7ae00a76ed309efb01a5583a8cdd4a1c0"
   end
   
   def initialize
