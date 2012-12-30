@@ -1,25 +1,40 @@
 require 'octokit'
+require 'thread'
 
 class GithubService
   def self.owner
-    @owner ||= new(HubConfig.user, HubConfig.token)
+    @owner ||= new(HubConfig.threads, HubConfig.user, HubConfig.token)
   end
   
   def all_commits(username, start_time, end_time, &block)
-    commits = []
+    mutex = Mutex.new
+    queue = self.repositories.dup
+    
+    self.thread_count.times.map {
+      Thread.new(queue, username, start_time, end_time, block) do |urls, tags|
+        while repo_name = mutex.synchronize { queue.pop }
+          puts "fetching repo: #{repo_name}"
+          repo_shas(repo_name, username, start_time, end_time) do |sha|
+            hash = repo_sha(repo_name, sha)
+            next unless hash.sha
+            commit = Commit.new(hash, repo_name, username)
+            mutex.synchronize { block.call commit }
+          end
+        end
+      end
+    }.each(&:join)
+  end
+  
+  def single_all_commits(username, start_time, end_time, &block)
     repositories.each do |repo_name|
+      puts "fetching repo: #{repo_name}"
       repo_shas(repo_name, username, start_time, end_time) do |sha|
         hash = repo_sha(repo_name, sha)
         next unless hash.sha
         commit = Commit.new(hash, repo_name, username)
-        if block_given?
-          block.call commit
-        else
-          commits << commit
-        end
+        block.call commit
       end
     end
-    commits
   end
 
   def repositories
@@ -37,10 +52,11 @@ class GithubService
     repos.compact.uniq
   end
   
-  attr_accessor :login, :token, :client
-  def initialize(login, token)
-    self.login = login
-    self.token = token
+  attr_accessor :client, :thread_count
+  def initialize(thread_count, login, token)
+    self.thread_count = thread_count
+    Octokit.client_id = "a5657692d116ce4d155f"
+    Octokit.client_secret = "4a4a8b9822b00b26ca586a364af5d5e49243c2a8"
     self.client = Octokit::Client.new(:login => login, :oauth_token => token, :auto_traversal => true)
   end
   
@@ -70,7 +86,7 @@ class GithubService
       return client.commits(repo_name, "master", options)
     else
       # it's over, cache it
-      VCR.use_cassette("#{repo_name}/commits/#{username}/#{since_time.to_i}-#{until_time.to_i}", :record => :new_episodes) do
+      VCR.use_cassette("#{repo_name}/#{username}/commits/#{since_time.to_i}-#{until_time.to_i}", :record => :new_episodes) do
          return client.commits(repo_name, "master", options)
       end
     end
@@ -78,8 +94,25 @@ class GithubService
     
   
   def repo_shas(repo_name, username, start_time, end_time, &block)
+    cache = Cacher.new("#{repo_name}/#{username}/shas/")
+    total_cache_key = "#{start_time.to_i}-#{end_time.to_i}"
+    if cached = cache.read(total_cache_key)
+      # fully cached
+      cached.each { |sha| block.call sha }
+      return
+    end
+    
     shas = []
-
+    fetch_repo_shas(repo_name, username, start_time, end_time) do |sha|
+      shas << sha
+      block.call sha
+    end
+    
+    cache.write(total_cache_key, shas)
+    return
+  end
+  
+  def fetch_repo_shas(repo_name, username, start_time, end_time, &block)
     until_time = end_time
     between = 1.day
     while until_time >= start_time
@@ -102,16 +135,10 @@ class GithubService
         next unless hash.is_a?(Hashie::Mash)
         next unless hash.sha
         
-        if block_given?
-          block.call hash.sha
-        else
-          shas << hash.sha
-        end
+        block.call hash.sha
       end
       until_time = since_time - 1.second
     end
-    
-    shas.compact.uniq
   end
   
 end

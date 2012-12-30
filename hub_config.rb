@@ -1,5 +1,3 @@
-require 'yaml'
-
 class HubConfig
   def self.instance
     @config ||= HubConfig.new
@@ -23,6 +21,10 @@ class HubConfig
   
   def self.token
     instance.token
+  end
+  
+  def self.threads
+    8
   end
   
   def initialize
