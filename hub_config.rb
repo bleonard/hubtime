@@ -24,7 +24,7 @@ class HubConfig
   end
   
   def self.threads
-    8
+    1
   end
   
   def initialize
