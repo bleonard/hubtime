@@ -157,7 +157,7 @@ class Activity
       key = "#{username}/#{start_time.to_i}-#{end_time.to_i}"
       out = self.new(key)
       if stats = cacher.read(key)
-        out.import(stats)
+###        out.import(stats)
       end
       out
     end

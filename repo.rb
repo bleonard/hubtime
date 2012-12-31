@@ -1,11 +1,15 @@
+# -*- encoding : utf-8 -*-
+
 class Repo
-  attr_reader :client, :repo_name, :username, :start_time, :end_time
+  attr_reader :client, :cacher
+  attr_reader :repo_name, :username, :start_time, :end_time
   def initialize(client, repo_name, username, start_time, end_time)
     @client = client
     @repo_name = repo_name
     @username = username
     @start_time = start_time
     @end_time = end_time
+    @cacher = Cacher.new("#{repo_name}")
   end
   
   def commits(&block)
@@ -18,14 +22,14 @@ class Repo
     end
   end
   
+  protected
   
   def shas(&block)
     eq_count = 5  # number of last five shas to be the same, allows caching even if end-time changes but no new commits
     eq_cache_key = nil
     
-    cache = Cacher.new("#{repo_name}/#{username}/shas/")
-    total_cache_key = "#{start_time.to_i}-#{end_time.to_i}"
-    if cached = cache.read(total_cache_key)
+    total_cache_key = "#{username}/shas/times/#{start_time.to_i}-#{end_time.to_i}"
+    if cached = cacher.read(total_cache_key)
       # fully cached
       cached.each { |sha| block.call sha }
       return
@@ -37,8 +41,8 @@ class Repo
       block.call sha
       
       if shas.size == eq_count
-        eq_cache_key = "#{start_time.to_i}-#{shas[0...eq_count].join("_")}"
-        if cached = cache.read(eq_cache_key)
+        eq_cache_key = "#{username}/shas/stamps/#{start_time.to_i}-#{shas[0...eq_count].join("_")}"
+        if cached = cacher.read(eq_cache_key)
           # given them the rest
           # MAYBE: could also do this halfway through
           #        would call, concat, skip and change the key below
@@ -49,8 +53,8 @@ class Repo
       end
     end
     
-    cache.write(eq_cache_key, shas) if eq_cache_key
-    cache.write(total_cache_key, shas)
+    cacher.write(eq_cache_key, shas) if eq_cache_key
+    cacher.write(total_cache_key, shas)
     return
   end
   
@@ -91,21 +95,24 @@ class Repo
     options[:until] = until_time.iso8601
     
     if Time.now < until_time
-      # NO VCR because now is in the window
+      # No caching because now is in the window
       return client.commits(repo_name, "master", options)
     else
       # it's over, cache it
-      # puts "#{repo_name}/#{username}/commits/#{since_time.to_i}-#{until_time.to_i}"
-      VCR.use_cassette("#{repo_name}/#{username}/commits/#{since_time.to_i}-#{until_time.to_i}", :record => :new_episodes) do
-         return client.commits(repo_name, "master", options)
-      end
+      cache_key = "#{username}/commits/#{since_time.to_i}-#{until_time.to_i}"
+      hashie = cacher.read(cache_key)
+      return hashie if hashie
+      hashie = client.commits(repo_name, "master", options)
+      cacher.write(cache_key, hashie)
     end
   end
   
   def fetch_sha(sha)
-    VCR.use_cassette("#{repo_name}/shas/#{sha}", :record => :new_episodes) do
-      return client.commit(repo_name, sha)
-    end
+    cache_key = "shas/#{sha}"
+    hashie = cacher.read(cache_key)
+    return hashie if hashie
+    hashie = client.commit(repo_name, sha)
+    cacher.write(cache_key, hashie)
   end
   
   

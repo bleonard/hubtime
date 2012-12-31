@@ -6,7 +6,6 @@ gem 'i18n'
 gem 'tzinfo'
 
 gem 'octokit'
-gem 'faraday'
-gem 'vcr'
 gem 'terminal-table'
 gem 'erubis'
+gem 'hashie'
