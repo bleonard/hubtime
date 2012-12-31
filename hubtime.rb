@@ -15,6 +15,7 @@ load 'hub_config.rb'
 load 'commit.rb'
 load 'github.rb'
 load 'activity.rb'
+load 'repo.rb'
 
 
 program :version, '0.0.1'
