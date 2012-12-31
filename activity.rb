@@ -106,11 +106,13 @@ class Activity
     end
     
     def key_value(key, repo = nil)
-      if repo
-        repo_stats[repo][key.to_s]
+      if repo.nil? || repo == "total"
+        hash = total_stats
       else
-        total_stats[key.to_s]
+        hash = repo_stats[repo]
       end
+      return 0 unless hash
+      hash[key.to_s]
     end
     
     def first!
@@ -393,39 +395,59 @@ class Activity
     file_name
   end
   
-  def graph(type = :impact)
+  def default_week(keys)
+    default_week = {}
+    keys.each do |key|
+      default_week[key] = {"data" => 0, "other" => 0, "label" => nil}
+    end
+    default_week
+  end
+  
+  def graph(type = :impact, stacked=false)
     compile!
     
     type = type.to_s
     other = "count"
     other = "impact" if type == "count"
     
-    data   = []
     others = []
     labels = []
     
-    week_data = 0
+    data   = {}
+    if stacked
+      keys = @time.repositories
+    else
+      keys = ["total"]
+    end
+    
+    keys.each do |key|
+      data[key] = []
+    end
+    
+    week = default_week(keys)
     week_other = 0
-    week_label = nil
     day = 0
     @time.each(:day) do |label, period|
       day += 1
-      week_label ||= label
-      week_data  += period.send(type)
+      keys.each do |key|
+        week[key]["label"] ||= label
+        week[key]["data"]  += period.send(type, key)
+      end
       week_other += period.send(other)
       
       if (day % 7) == 0
-        data   << week_data
+        keys.each do |key|
+          data[key] << week[key]["data"]
+        end
         others << week_other
         
         if (day % 28) == 0
-          labels << week_label
+          labels << week["label"]
         else
           labels << ""
         end
         
-        week_data = 0
-        week_label = nil
+        week = default_week(keys)
         week_other = 0
       end
     end

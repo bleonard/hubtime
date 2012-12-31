@@ -43,7 +43,8 @@ class GithubService
       end
     end
     
-    repos.compact.uniq
+    # return these, ignoring requested ones
+    repos.compact.uniq - HubConfig.ignore
   end
   
   attr_accessor :client, :thread_count

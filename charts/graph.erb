@@ -27,6 +27,9 @@
             marker: {
               enabled: false
             }
+          },
+          area: {
+            stacking: 'normal'
           }
         },
         title: {
@@ -57,26 +60,30 @@
         ],
         tooltip: {
           formatter: function() {
-            return this.y.toString();
+            return '' + this.series.name + ': ' + this.y.toString();
           }
         },
         credits: {
           enabled: false
         },
-        series: [{
-          name: '<%= data_type.titleize %>',
-          color: '#F17F49',
-          type: 'area',
-          data: <%= data.to_json %>
-        },
-        {
-          name: '<%= other_type.titleize %>',
-          color: '#5EAAE4',
-          type: 'line',
-          dashStyle: 'LongDash',
-          yAxis: 1,
-          data: <%= other.to_json %>
-        },
+        series: [
+          <% data.each do |key, array| %>
+            {
+              name: '<%= key.include?('/') ? key : key.titleize %>',
+              <%= "color: '#F17F49'," if data.size == 1 %>
+              
+              type: 'area',
+              data: <%= array.to_json %>
+            },
+          <% end %>
+          {
+            name: '<%= other_type.titleize %>',
+            color: '#5EAAE4',
+            type: 'line',
+            dashStyle: 'LongDash',
+            yAxis: 1,
+            data: <%= other.to_json %>
+          },
         ]
       });
     //]]>

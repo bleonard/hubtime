@@ -25,6 +25,14 @@ class HubConfig
     instance.token
   end
   
+  def self.ignore
+    instance.ignore
+  end
+  
+  def self.add_ignore(repo_name)
+    instance.add_ignore(repo_name)
+  end
+  
   def self.threads
     4
   end
@@ -37,28 +45,32 @@ class HubConfig
     "5687e5f7ae00a76ed309efb01a5583a8cdd4a1c0"
   end
   
+  attr_reader :user, :token, :ignore
   def initialize
     @file_name = "config"
     hash = read_file
     @user = hash["user"]
     @token = hash["token"]
+    @ignore = hash["ignore"] || []
   end
   
   def read_file
     YAML.load_file(file)
   end
   
-  def write_file(hash)
+  def write_file!
+    hash = {}
+    ["user", "token", "ignore"].each do |key|
+      hash[key] = instance_variable_get("@#{key}")
+    end
+    
     File.open(file, 'w' ) do |out|
-      YAML.dump(hash, out )
+      YAML.dump(hash, out)
     end
   end
   
   def file
-    dir = File.join(File.dirname(__FILE__), "data")
-    Dir.mkdir(dir) unless Dir.exists?(dir)
-    
-    file = File.join(dir, "#{@file_name}.yml")
+    file = File.join(File.dirname(__FILE__), "config.yml")
     
     unless File.exists?(file)
       File.open(file, 'w' ) do |out|
@@ -68,18 +80,16 @@ class HubConfig
     file
   end
   
+  def add_ignore(repo_name)
+    @ignore << repo_name
+    @ignore.uniq!
+    write_file!
+  end
+  
   def store(user, token)
     @user = user
     @token = token
-    write_file({"user" => user, "token" => token})
-  end
-  
-  def token
-    @token
-  end
-  
-  def user
-    @user
+    write_file!
   end
   
 end

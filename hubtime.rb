@@ -44,6 +44,7 @@ command :graph do |c|
   c.example 'description', 'command example'
   c.option '--months INTEGER', 'How many months of history'
   c.option '--user USERNAME', 'Which Github user'
+  c.option '--stacked', 'To see data by repository'
   c.action do |args, options|
     options.default :months => 12
     options.default :data => "count"
@@ -51,7 +52,7 @@ command :graph do |c|
     type ||= "commits"
     type = "count" if type == "commits"
     activity = Activity.new(self, options.user, options.months)
-    file = activity.graph(type)
+    file = activity.graph(type, options.stacked.present?)
     puts "saved: #{file}"
     `open #{file}`
   end
@@ -143,7 +144,6 @@ command :auth do |c|
   c.syntax = 'hubtime auth'
   c.summary = ''
   c.description = 'Generates a token'
-  c.example 'description', 'command example'
   c.action do |args, options|
     username = ask("Github Username: ")
     password = ask("Github Password: ") { |q| q.echo = "*" }
@@ -153,7 +153,7 @@ command :auth do |c|
     
     HubConfig.auth(username, password)
     
-    puts "Current config..."
+    puts "Current auth..."
     
     puts "  Username: #{HubConfig.user}"
     puts "     Token: #{HubConfig.token}"
@@ -163,6 +163,36 @@ command :auth do |c|
     end
     
     puts ""
+  end
+end
+
+command :ignore do |c|
+  c.syntax = 'hubtime ignore REPO_NAME'
+  c.summary = ''
+  c.description = 'Stop looking at this repo'
+  c.example 'description', 'hubtime ignore bleonard/rails'
+  c.action do |args, options|
+    if args.first
+      HubConfig.add_ignore(args.first)
+      Cacher.clear("activity")  # different repos
+      Cacher.clear("charts")
+    end
+    
+    puts "Current ignore list: #{HubConfig.ignore.join(", ")}"
+    puts "This list can be edited in the config.yml"
+  end
+end
+
+command :clear do |c|
+  c.syntax = 'hubtime clear'
+  c.summary = ''
+  c.description = 'Removes items from the cache'
+  c.example 'description', 'hubtime clear activity'
+  c.action do |args, options|
+    args << "activity" if args.size == 0
+    args.each do |item|
+      Cacher.clear(item)
+    end
   end
 end
 

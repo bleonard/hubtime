@@ -1,6 +1,20 @@
 # -*- encoding : utf-8 -*-
 
 class Cacher
+  def self.clear(type)
+    dir = nil
+    case type
+    when "all"
+      dir = File.join(File.dirname(__FILE__), "data")
+    when "cache", "charts"
+      dir = File.join(File.dirname(__FILE__), "data", type)
+    else
+      dir = File.join(File.dirname(__FILE__), "data", "cache", type)
+    end
+    
+    raise "Unknown clear type" unless dir
+    FileUtils.rm_rf(dir, :secure => true) if File.exist?(dir)
+  end
   def initialize(directory)
     root = File.join(File.dirname(__FILE__), "data", "cache")
     @directory = File.join(root, directory)
