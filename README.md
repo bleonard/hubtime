@@ -1,20 +1,26 @@
 To give auth (It does not store your password)
+
     ./hubtime.rb auth
 
 To see what repositiories it will pull from
+
     ./hubtime.rb repositories
     
 To ignore some of those
+
     ./hubtime.rb ignore bleonard/rails
     
 Caching is heavily used to not kill Github and speed things up. Caching is done at the sha, time window per repo, and the full history levels.
 Specifically, if you add another repo or something, you'll want to do this
+
     ./hubtime.rb clear activity
 
 If things are generally messed up and you want to start again, clear it all
+
     ./hubtime.rb clear all
     
 To show table of commits and such
+
     ./hubtime.rb table
     ./hubtime.rb table --months 3
     ./hubtime.rb table --unit day
@@ -40,6 +46,7 @@ To show table of commits and such
     +---------+---------+--------+-----------+-----------+
 
 Graph a piece of data
+
     ./hubtime.rb graph
     ./hubtime.rb graph impact
     ./hubtime.rb graph deletions
@@ -49,26 +56,29 @@ Graph a piece of data
     < launches HTML file of graph >
     
 All of those work with a stacked graph to see if broken up by repository
+
     ./hubtime.rb graph --stacked
     
     ./hubtime.rb graph impact --stacked
     < launches HTML file of graph >
     
 Impact Graph like on Github
+
     ./hubtime.rb impact
     
-    ./hubtime.rb impact --months 3
+    ./hubtime.rb impact --months 12
     < launches HTML file of graph >
     
 Pie chart of repositories
+
     ./hubtime.rb pie
-    ./hubtime.rb pie --months 3
     ./hubtime.rb pie impact
     
-    ./hubtime.rb pie commits
+    ./hubtime.rb pie --months 3
     < launches HTML file of graph >
     
 Sparklines in the console
+
     ./hubtime.rb spark
     ./hubtime.rb spark commits
     
