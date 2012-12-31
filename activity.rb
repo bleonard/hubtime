@@ -4,15 +4,25 @@ class Activity
   
   class Period
     attr_reader :example, :label, :compiled, :children
+    attr_reader :total_stats, :repo_stats
     def initialize(label, example_time=nil)
       @example = example_time
       @label = label
       @children = {}
+      @total_stats = default_stats
+      @repo_stats  = Hash.new{ |hash, key| hash[key] = default_stats }
       @compiled = nil
     end
     
     def add(commit)
       self.commits << commit
+      self.total_stats.keys.each do |key|
+        self.total_stats[key] += commit.send(key)
+      end
+      self.repo_stats[commit.repo_name].keys.each do |key|
+        self.repo_stats[commit.repo_name][key] += commit.send(key)
+      end
+      
       if self.class.child_class
         klass = self.class.child_class
         key = klass.display(commit.time)
@@ -49,14 +59,10 @@ class Activity
       
       @children = filled
       
-      @compiled = { "additions" => 0, "deletions" => 0, "impact" => 0, "count" => 0 }
-      commits.each do |commit|
-        @compiled["additions"] += commit.additions
-        @compiled["deletions"] += commit.deletions
-        @compiled["impact"]     += commit.impact
-        @compiled["count"]     += 1
-      end
-      
+      @compiled = {}
+      @compiled["total_stats"] = self.total_stats
+      @compiled["repo_stats"]  = self.repo_stats
+          
       @compiled["children"] = {}
       @children.each do |key, period|
         @compiled["children"][key] = period.compiled
@@ -65,7 +71,9 @@ class Activity
     
     def import(stats)
       child_list  = stats.delete("children")
-      @compiled = stats
+      @compiled    = stats
+      @total_stats = stats["total_stats"]
+      @repo_stats  = stats["repo_stats"]
       @children = {}
       child_list.each do |key, child_stats|
         @children[key] = self.class.child_class.new(key)
@@ -78,19 +86,19 @@ class Activity
     end
     
     def count
-      @compiled["count"]
+      total_stats["count"]
     end
     
     def additions
-      @compiled["additions"]
+      total_stats["additions"]
     end
     
     def deletions
-      @compiled["deletions"]
+      total_stats["deletions"]
     end
     
     def impact
-      @compiled["impact"]
+      total_stats["impact"]
     end
     
     def first!
@@ -132,6 +140,10 @@ class Activity
         last_child_key
       end
     end
+    
+    def default_stats
+      {"additions" => 0, "deletions" => 0, "impact" => 0, "count" => 0}
+    end
   end
   
   class Forever < Period
@@ -157,7 +169,7 @@ class Activity
       key = "#{username}/#{start_time.to_i}-#{end_time.to_i}"
       out = self.new(key)
       if stats = cacher.read(key)
-###        out.import(stats)
+        out.import(stats)
       end
       out
     end

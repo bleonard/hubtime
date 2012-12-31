@@ -16,6 +16,11 @@ class Commit
     "#{time.strftime('%F')} commit: #{repo_name} : #{sha} by #{committer} with #{additions} additions and #{deletions} deletions}"
   end
   
+  def count
+    return 0 if impact <= 0
+    1
+  end
+  
   def impact
     additions + deletions
   end
