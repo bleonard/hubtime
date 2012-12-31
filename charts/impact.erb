@@ -1,0 +1,90 @@
+<%
+  title = "Impact by Week: #{username}"
+%>
+
+<html>
+  <head>
+    <title><%= title %></title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+    <script src="http://code.highcharts.com/highcharts.js"></script>
+    <script src="http://code.highcharts.com/modules/exporting.js"></script> 
+  </head>
+  <body>
+    <div id="container" style="min-width: 400px; height: 400px; margin: 0 auto"></div>
+    
+    <script type="text/javascript">
+    //<![CDATA[
+      var chart = new Highcharts.Chart({
+        chart: {
+          renderTo: 'container',
+        },
+        plotOptions: {
+          series: {
+            shadow: false,
+            lineWidth: 1,
+            marker: {
+              enabled: false
+            }
+          }
+        },
+        title: {
+          text: '<%= title %>'
+        },
+        xAxis: {
+          categories: <%= labels.to_json %>
+        },
+        yAxis: [
+          { // additions and deletions
+            title: {
+              text: ''
+            }
+          },
+          { // total impact
+            title: {
+              text: ''
+            },
+            labels: {
+              style: {
+                color: '#047DDA'
+              }
+            },
+            opposite: true,
+            min: 0
+          }
+        ],
+        tooltip: {
+          formatter: function() {
+            if(this.series.name == 'Deletions')
+              return (-1 * this.y).toString();
+            else
+              return this.y.toString();
+          }
+        },
+        credits: {
+          enabled: false
+        },
+        series: [{
+          name: 'Additions',
+          color: '#1DB34F',
+          type: 'area',
+          data: <%= additions.to_json %>
+        }, {
+          name: 'Deletions',
+          color: '#AD1017',
+          type: 'area',
+          data: <%= deletions.collect{|d| -1*d }.to_json %>
+        },
+        {
+          name: 'Total Impact',
+          color: '#047DDA',
+          type: 'line',
+          //dashStyle: 'LongDash',
+          yAxis: 1,
+          data: <%= impacts.to_json %>
+        },
+        ]
+      });
+    //]]>
+    </script>
+  </body>
+</html>

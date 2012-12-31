@@ -11,7 +11,7 @@ class GithubService
   
   def all_commits(username, start_time, end_time, &block)
     mutex = Mutex.new
-    queue = self.repositories.dup
+    queue = self.repositories(username).dup
 
     if self.thread_count == 1
       mutex_commits(mutex, queue, username, start_time, end_time, block)
@@ -24,13 +24,21 @@ class GithubService
     end
   end
 
-  def repositories
+  def repositories(username)
+ 
     repos = []
-    client.repositories.each do |hash|
+
+    client.repositories(username).each do |hash|
       repos << hash.full_name
     end
+    
+    unless username == client.login
+      client.repositories(client.login).each do |hash|
+        repos << hash.full_name
+      end
+    end
 
-    user_organizations.each do |org_name|
+    user_organizations(username).each do |org_name|
       client.organization_repositories(org_name).each do |hash|
         repos << hash.full_name
       end
@@ -69,11 +77,19 @@ class GithubService
     end
   end
     
-  def user_organizations
+  def user_organizations(username)
     names = []
-    client.organizations.each do |hash|
+    
+    client.organizations(username).each do |hash|
       names << hash.login
     end
+   
+    unless username == client.login
+      client.organizations(client.login).each do |hash|
+        names << hash.login
+      end
+    end
+    
     names.compact.uniq
   end
   

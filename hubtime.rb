@@ -7,6 +7,7 @@ require 'commander/import'
 require 'terminal-table'
 require 'fileutils'
 require 'yaml'
+require 'erubis'
 
 load 'cacher.rb'
 load 'vcr.rb'
@@ -19,24 +20,39 @@ load 'activity.rb'
 program :version, '0.0.1'
 program :description, 'See activity on Github.'
  
-command :graph do |c|
-  c.syntax = 'hubtime graph [options]'
+command :impact do |c|
+  c.syntax = 'hubtime impact'
   c.summary = ''
-  c.description = 'Graph your time'
+  c.description = 'Graph your additions and deletions'
   c.example 'description', 'command example'
   c.option '--months INTEGER', 'How many months of history'
-  c.option '--user USERNAME', 'How many months of history'
+  c.option '--user USERNAME', 'Which Github user'
   c.action do |args, options|
     options.default :months => 12
-    months = options.months.to_i
-    months = 12 if months <= 0
-    user = options.user
-    user ||= HubConfig.user
-    raise("Need github user name. hubtime config --user USERNAME --token TOKEN") unless user
-    
-    activity = Activity.new(self, user, months)
-    activity.compile!
-    
+    activity = Activity.new(self, options.user, options.months)
+    file = activity.impact
+    puts "saved: #{file}"
+    `open #{file}`
+  end
+end
+
+command :graph do |c|
+  c.syntax = 'hubtime graph [commits|impact|additions|deletions]'
+  c.summary = ''
+  c.description = 'Graph a single count'
+  c.example 'description', 'command example'
+  c.option '--months INTEGER', 'How many months of history'
+  c.option '--user USERNAME', 'Which Github user'
+  c.action do |args, options|
+    options.default :months => 12
+    options.default :data => "count"
+    type = args.first
+    type ||= "commits"
+    type = "count" if type == "commits"
+    activity = Activity.new(self, options.user, options.months)
+    file = activity.graph(type)
+    puts "saved: #{file}"
+    `open #{file}`
   end
 end
 
@@ -51,16 +67,8 @@ command :table do |c|
   c.action do |args, options|
     options.default :months => 12
     options.default :unit => "month"
-    
-    months = options.months.to_i
-    months = 12 if months <= 0
-    user = options.user
-    user ||= HubConfig.user
-    raise("Need github user name. hubtime config --user USERNAME --token TOKEN") unless user
-    
-    activity = Activity.new(self, user, months)
+    activity = Activity.new(self, options.user, options.months)
     puts activity.table(options.unit)
-    
   end
 end
 
@@ -77,16 +85,8 @@ command :spark do |c|
     options.default :months => 12
     options.default :unit => "month"
     options.default :data => "impact"
-    
-    months = options.months.to_i
-    months = 12 if months <= 0
-    user = options.user
-    user ||= HubConfig.user
-    raise("Need github user name. hubtime config --user USERNAME --token TOKEN") unless user
-    
-    activity = Activity.new(self, user, months)
+    activity = Activity.new(self, options.user, options.months)
     puts activity.spark(options.unit, options.data)
-    
   end
 end
 
@@ -146,9 +146,13 @@ command :auth do |c|
 end
 
 command :repositories do |c|
+  c.syntax = 'hubtime repositories'
   c.description = 'Lists known repositories'
+  c.option '--user USERNAME', 'Github user name'
   c.action do |args, options|
-    GithubService.owner.repositories.each do |name|
+    user = options.user
+    user ||= HubConfig.user
+    GithubService.owner.repositories(user).each do |name|
       puts name
     end
   end

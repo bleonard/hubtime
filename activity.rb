@@ -114,8 +114,6 @@ class Activity
       
       first = self._first_child_key(parent)
       last = self._last_child_key(parent)
-      puts first
-      puts last
       (first..last).to_a
     end
     
@@ -255,6 +253,11 @@ class Activity
   
   attr_reader :username, :start_time, :end_time
   def initialize(cli, username, num_months)
+    num_months = num_months.to_i
+    num_months = 12 if num_months <= 0
+    username ||= HubConfig.user
+    raise("Need github user name. hubtime config --user USERNAME --token TOKEN") unless username
+    
     Time.zone = "Pacific Time (US & Canada)"  # TODO: command to allow this being set
     @cli = cli
     @username = username
@@ -311,6 +314,110 @@ class Activity
       end
     end
     str
+  end
+  
+  def impact
+    compile!
+    
+    additions = []
+    deletions = []
+    impacts   = [] 
+    labels    = []
+    
+    week_additions = 0
+    week_deletions = 0
+    week_label = nil
+    
+    total_impact = 0
+    
+    day = 0
+    @time.each(:day) do |label, period|
+      day += 1
+      week_label ||= label
+      week_additions += period.additions
+      week_deletions += period.deletions
+      total_impact   += period.impact
+      
+      if (day % 7) == 0
+        additions << week_additions
+        deletions << week_deletions
+        impacts   << total_impact
+        
+        if (day % 28) == 0
+          labels << week_label
+        else
+          labels << ""
+        end
+        
+        week_additions = 0
+        week_deletions = 0
+        week_label = nil
+      end
+    end
+    
+    charts = File.join(File.dirname(__FILE__), "charts")
+    template = File.read(File.join(charts, "impact.erb"))
+    template = Erubis::Eruby.new(template)
+    html = template.result(:additions => additions, :deletions => deletions, :impacts => impacts, :labels => labels, :username => username)
+    
+    root = File.join(File.dirname(__FILE__), "data", "charts")
+    path = "#{username}-impact-#{start_time.to_i}-#{end_time.to_i}.html"
+    file_name = File.join(root, path)
+    directory = File.dirname(file_name)
+    FileUtils.mkdir_p(directory) unless File.exist?(directory)
+    File.open(file_name, 'w') {|f| f.write(html) }
+    file_name
+  end
+  
+  def graph(type = :impact)
+    compile!
+    
+    type = type.to_s
+    other = "count"
+    other = "impact" if type == "count"
+    
+    data   = []
+    others = []
+    labels = []
+    
+    week_data = 0
+    week_other = 0
+    week_label = nil
+    day = 0
+    @time.each(:day) do |label, period|
+      day += 1
+      week_label ||= label
+      week_data  += period.send(type)
+      week_other += period.send(other)
+      
+      if (day % 7) == 0
+        data   << week_data
+        others << week_other
+        
+        if (day % 28) == 0
+          labels << week_label
+        else
+          labels << ""
+        end
+        
+        week_data = 0
+        week_label = nil
+        week_other = 0
+      end
+    end
+    
+    charts = File.join(File.dirname(__FILE__), "charts")
+    template = File.read(File.join(charts, "graph.erb"))
+    template = Erubis::Eruby.new(template)
+    html = template.result(:data => data, :other => others, :labels => labels, :data_type => type, :other_type => other, :username => username)
+    
+    root = File.join(File.dirname(__FILE__), "data", "charts")
+    path = "#{username}-graph-#{type}-#{start_time.to_i}-#{end_time.to_i}.html"
+    file_name = File.join(root, path)
+    directory = File.dirname(file_name)
+    FileUtils.mkdir_p(directory) unless File.exist?(directory)
+    File.open(file_name, 'w') {|f| f.write(html) }
+    file_name
   end
 
 end
