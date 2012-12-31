@@ -287,7 +287,7 @@ class Activity
     Time.zone = "Pacific Time (US & Canada)"  # TODO: command to allow this being set
     @cli = cli
     @username = username
-    @start_time = num_months.months.ago.beginning_of_month
+    @start_time = (num_months-1).months.ago.beginning_of_month
     @end_time = Time.zone.now.end_of_month
     
     @time = Forever.load(username, start_time, end_time)
@@ -398,7 +398,7 @@ class Activity
   def default_week(keys)
     default_week = {}
     keys.each do |key|
-      default_week[key] = {"data" => 0, "other" => 0, "label" => nil}
+      default_week[key] = {"data" => 0}
     end
     default_week
   end
@@ -426,11 +426,12 @@ class Activity
     
     week = default_week(keys)
     week_other = 0
+    week_label = nil
     day = 0
     @time.each(:day) do |label, period|
       day += 1
+      week_label ||= label
       keys.each do |key|
-        week[key]["label"] ||= label
         week[key]["data"]  += period.send(type, key)
       end
       week_other += period.send(other)
@@ -442,13 +443,14 @@ class Activity
         others << week_other
         
         if (day % 28) == 0
-          labels << week["label"]
+          labels << week_label
         else
           labels << ""
         end
         
         week = default_week(keys)
         week_other = 0
+        week_label = nil
       end
     end
     

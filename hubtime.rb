@@ -9,6 +9,8 @@ require 'fileutils'
 require 'yaml'
 require 'erubis'
 require 'hashie'
+require 'octokit'
+
 
 load 'cacher.rb'
 load 'hub_config.rb'
@@ -106,9 +108,12 @@ command :spark do |c|
   c.action do |args, options|
     options.default :months => 12
     options.default :unit => "month"
-    options.default :data => "impact"
+    type = args.first
+    type ||= "commits"
+    type = "count" if type == "commits"
+    
     activity = Activity.new(self, options.user, options.months)
-    puts activity.spark(options.unit, options.data)
+    puts activity.spark(options.unit, type)
   end
 end
 
