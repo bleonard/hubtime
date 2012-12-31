@@ -57,6 +57,26 @@ command :graph do |c|
   end
 end
 
+command :pie do |c|
+  c.syntax = 'hubtime pie [commits|impact|additions|deletions]'
+  c.summary = ''
+  c.description = 'Graph a pie chart by repository'
+  c.example 'description', 'command example'
+  c.option '--months INTEGER', 'How many months of history'
+  c.option '--user USERNAME', 'Which Github user'
+  c.action do |args, options|
+    options.default :months => 12
+    options.default :data => "count"
+    type = args.first
+    type ||= "commits"
+    type = "count" if type == "commits"
+    activity = Activity.new(self, options.user, options.months)
+    file = activity.pie(type)
+    puts "saved: #{file}"
+    `open #{file}`
+  end
+end
+
 command :table do |c|
   c.syntax = 'hubtime table [options]'
   c.summary = ''

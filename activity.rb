@@ -85,20 +85,32 @@ class Activity
       @commits ||= []
     end
     
-    def count
-      total_stats["count"]
+    def repositories
+      repo_stats.keys
+    end
+
+    def count(repo=nil)
+      key_value("count", repo)
     end
     
-    def additions
-      total_stats["additions"]
+    def additions(repo=nil)
+      key_value("additions", repo)
     end
     
-    def deletions
-      total_stats["deletions"]
+    def deletions(repo=nil)
+      key_value("deletions", repo)
     end
     
-    def impact
-      total_stats["impact"]
+    def impact(repo=nil)
+      key_value("impact", repo)
+    end
+    
+    def key_value(key, repo = nil)
+      if repo
+        repo_stats[repo][key.to_s]
+      else
+        total_stats[key.to_s]
+      end
     end
     
     def first!
@@ -425,6 +437,31 @@ class Activity
     
     root = File.join(File.dirname(__FILE__), "data", "charts")
     path = "#{username}-graph-#{type}-#{start_time.to_i}-#{end_time.to_i}.html"
+    file_name = File.join(root, path)
+    directory = File.dirname(file_name)
+    FileUtils.mkdir_p(directory) unless File.exist?(directory)
+    File.open(file_name, 'w') {|f| f.write(html) }
+    file_name
+  end
+    
+  def pie(type = :impact)
+    compile!
+    
+    type = type.to_s
+    data   = []
+    
+    @time.repositories.each do |repo_name|
+      value = @time.send(type, repo_name)
+      data << [repo_name, value] if value > 0
+    end
+    
+    charts = File.join(File.dirname(__FILE__), "charts")
+    template = File.read(File.join(charts, "pie.erb"))
+    template = Erubis::Eruby.new(template)
+    html = template.result(:data => data, :data_type => type, :username => username)
+    
+    root = File.join(File.dirname(__FILE__), "data", "charts")
+    path = "#{username}-pie-#{type}-#{start_time.to_i}-#{end_time.to_i}.html"
     file_name = File.join(root, path)
     directory = File.dirname(file_name)
     FileUtils.mkdir_p(directory) unless File.exist?(directory)

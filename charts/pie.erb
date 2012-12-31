@@ -1,0 +1,51 @@
+<%
+  data_type = "commits"  if data_type  == "count"
+  title = "#{data_type.titleize} by Repository: #{username}"
+%>
+
+<html>
+  <head>
+    <title><%= title %></title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+    <script src="http://code.highcharts.com/highcharts.js"></script>
+    <script src="http://code.highcharts.com/modules/exporting.js"></script> 
+  </head>
+  <body>
+    <div id="container" style="min-width: 400px; height: 400px; margin: 0 auto"></div>
+    
+    <script type="text/javascript">
+    //<![CDATA[
+      var chart = new Highcharts.Chart({
+        chart: {
+          renderTo: 'container',
+          plotBackgroundColor: null,
+          plotBorderWidth: null,
+          plotShadow: false
+        },
+        title: {
+          text: '<%= title %>'
+        },
+        tooltip: {
+          pointFormat: '{series.name}: <b>{point.percentage}%</b>',
+          percentageDecimals: 1
+        },
+        plotOptions: {
+          pie: {
+            allowPointSelect: true,
+            cursor: 'pointer',
+            dataLabels: {
+               enabled: false
+            },
+            showInLegend: true
+          }
+        },
+        series: [{
+          type: 'pie',
+            name: 'Repositories',
+            data: <%= data.to_json %>
+        }]
+      });
+    //]]>
+    </script>
+  </body>
+</html>
