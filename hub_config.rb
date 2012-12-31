@@ -1,28 +1,31 @@
 # -*- encoding : utf-8 -*-
 
+require 'openssl'
+require 'digest/sha2'
+
 class HubConfig
   def self.instance
     @config ||= HubConfig.new
   end
   
   def self.auth(user, password)
-    client = Octokit::Client.new(:login => user, :password => password)
-    response = client.create_authorization({:client_id => self.client_id, :client_secret => self.client_secret,
-          :scopes => ["repo", "user"], :note => "Hubtime", :note_url=> "https://github.com/bleonard/hubtime"})
-    raise "Error getting Github token" unless response["token"]
-    store(user, response["token"])
+    store(user, password)
   end
   
-  def self.store(user, token)
-    instance.store(user, token)
+  def self.store(user, password)
+    instance.store(user, password)
   end
   
   def self.user
     instance.user
   end
   
-  def self.token
-    instance.token
+  def self.password
+    instance.password
+  end
+  
+  def self.display_password
+    '*' * password.size
   end
   
   def self.ignore
@@ -37,20 +40,12 @@ class HubConfig
     8
   end
   
-  def self.client_id
-    "fcb998c47db26c1e0339"
-  end
-  
-  def self.client_secret
-    "5687e5f7ae00a76ed309efb01a5583a8cdd4a1c0"
-  end
-  
-  attr_reader :user, :token, :ignore
+  attr_reader :user, :password, :ignore
   def initialize
     @file_name = "config"
     hash = read_file
     @user = hash["user"]
-    @token = hash["token"]
+    @password = Stuff.decrypt(hash["password"])
     @ignore = hash["ignore"] || []
   end
   
@@ -60,9 +55,11 @@ class HubConfig
   
   def write_file!
     hash = {}
-    ["user", "token", "ignore"].each do |key|
+    ["user", "password", "ignore"].each do |key|
       hash[key] = instance_variable_get("@#{key}")
     end
+    
+    hash["password"] = Stuff.encrypt(hash["password"])
     
     File.open(file, 'w' ) do |out|
       YAML.dump(hash, out)
@@ -86,10 +83,39 @@ class HubConfig
     write_file!
   end
   
-  def store(user, token)
+  def store(user, password)
     @user = user
-    @token = token
+    @password = password
     write_file!
+  end
+  
+  class Stuff
+    def self.key
+      sha256 = Digest::SHA2.new(256)
+      sha256.digest("better than plain text")
+    end
+    def self.iv
+      "kjfdhkkkjkjhfdskljghfkdjhags"
+    end
+    def self.encrypt(payload)
+      return nil if payload == nil
+      aes = OpenSSL::Cipher.new("AES-256-CFB")
+      aes.encrypt
+      aes.key = key
+      aes.iv = iv
+      
+      aes.update(payload) + aes.final
+    end
+
+    def self.decrypt(encrypted)
+      return nil if encrypted == nil
+      
+      aes = OpenSSL::Cipher.new("AES-256-CFB")
+      aes.decrypt
+      aes.key = key
+      aes.iv = iv
+      aes.update(encrypted) + aes.final
+    end
   end
   
 end

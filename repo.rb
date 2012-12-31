@@ -22,11 +22,11 @@ class Repo
   end
   
   def auto_client
-    @auto_client ||= Octokit::Client.new(:login => HubConfig.user, :oauth_token => HubConfig.token, :auto_traversal => true)
+    @auto_client ||= Octokit::Client.new(:login => HubConfig.user, :password => HubConfig.password, :auto_traversal => true)
   end
   
   def single_client
-    @single_client ||= Octokit::Client.new(:login => HubConfig.user, :oauth_token => HubConfig.token)
+    @single_client ||= Octokit::Client.new(:login => HubConfig.user, :password => HubConfig.password)
   end
   
   def commits(&block)

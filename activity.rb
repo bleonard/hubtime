@@ -282,7 +282,7 @@ class Activity
     num_months = num_months.to_i
     num_months = 12 if num_months <= 0
     username ||= HubConfig.user
-    raise("Need github user name. hubtime config --user USERNAME --token TOKEN") unless username
+    raise("Need github user name. Use hubtime auth") unless username
     
     Time.zone = "Pacific Time (US & Canada)"  # TODO: command to allow this being set
     @cli = cli
@@ -295,7 +295,7 @@ class Activity
   
   def compile!
     unless @time.compiled?
-      GithubService.owner.all_commits(username, start_time, end_time) do |commit|
+      GithubService.owner.commits(username, start_time, end_time) do |commit|
         @time.add(commit)
       end
       puts "... compiling data for #{username}"

@@ -11,7 +11,6 @@ require 'erubis'
 require 'hashie'
 require 'octokit'
 
-
 load 'cacher.rb'
 load 'hub_config.rb'
 load 'commit.rb'
@@ -118,27 +117,27 @@ command :spark do |c|
 end
 
 command :config do |c|
-  c.syntax = 'hubtime config --user USERNAME --token TOKEN'
+  c.syntax = 'hubtime config --user USERNAME --password PASSWORD'
   c.summary = ''
   c.description = 'Sets your details'
   c.example 'description', 'command example'
   c.option '--user USERNAME', 'Github user name'
-  c.option '--token TOKEN', 'Github access token'
+  c.option '--password PASSWORD', 'Github password'
   c.action do |args, options|
-    if options.token || options.user
-      raise("Need access token") unless options.token
+    if options.password || options.user
+      raise("Need password") unless options.password
       raise("Need github user name") unless options.user
-      HubConfig.store(options.user, options.token)
+      HubConfig.store(options.user, options.password)
       puts "Set config..."
     else
       puts "Current config..."
     end
     
     puts "  Username: #{HubConfig.user}"
-    puts "     Token: #{HubConfig.token}"
+    puts "  Password: #{HubConfig.display_password}"
     
-    unless options.token || options.user
-      puts "To set, use command: hubtime config --user USERNAME --token TOKEN" 
+    unless options.password || options.user
+      puts "To set, use command: hubtime config --user USERNAME --password PASSWORD" 
     end
     
     puts ""
@@ -148,7 +147,7 @@ end
 command :auth do |c|
   c.syntax = 'hubtime auth'
   c.summary = ''
-  c.description = 'Generates a token'
+  c.description = 'Saves credentials'
   c.action do |args, options|
     username = ask("Github Username: ")
     password = ask("Github Password: ") { |q| q.echo = "*" }
@@ -161,10 +160,10 @@ command :auth do |c|
     puts "Current auth..."
     
     puts "  Username: #{HubConfig.user}"
-    puts "     Token: #{HubConfig.token}"
+    puts "  Password: #{HubConfig.display_password}"
     
-    unless options.token || options.user
-      puts "To set directly, use command: hubtime config --user USERNAME --token TOKEN" 
+    unless options.password || options.user
+      puts "To set directly, use command: hubtime config --user USERNAME --password PASSWORD" 
     end
     
     puts ""
