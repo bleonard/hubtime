@@ -1,4 +1,10 @@
-To give auth (It does not store your password)
+## Hubtime
+
+I wanted to be able to see how things went this year, but Github didn't give a graph across all the repositories. I used their API to generate some graphs.
+
+### Commands
+
+To give auth (It will store your password encrypted on disk)
 
     ./hubtime.rb auth
 
