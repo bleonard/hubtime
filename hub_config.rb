@@ -26,7 +26,7 @@ class HubConfig
   end
   
   def self.threads
-    1
+    4
   end
   
   def self.client_id

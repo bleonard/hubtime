@@ -27,17 +27,17 @@ class GithubService
   def repositories(username)
     repos = []
 
-    client.repositories(username).each do |hash|
+    client.repositories.each do |hash|
       repos << hash.full_name
     end
-    
+
     unless username == client.login
-      client.repositories(client.login).each do |hash|
+      client.repositories(username).each do |hash|
         repos << hash.full_name
       end
     end
 
-    user_organizations(username).each do |org_name|
+    self.organizations(username).each do |org_name|
       client.organization_repositories(org_name).each do |hash|
         repos << hash.full_name
       end
@@ -58,7 +58,7 @@ class GithubService
   protected
   
   def mutex_commits(mutex, queue, username, start_time, end_time, block)
-    while repo_name = mutex.synchronize { queue.pop }
+    while repo_name = mutex.synchronize { queue.shift }
       puts "fetching repo: #{repo_name}"
       repo = Repo.new(client, repo_name, username, start_time, end_time)
       repo.commits do |commit|
@@ -67,15 +67,15 @@ class GithubService
     end
   end
  
-  def user_organizations(username)
+  def organizations(username)
     names = []
     
-    client.organizations(username).each do |hash|
+    client.organizations.each do |hash|
       names << hash.login
     end
    
     unless username == client.login
-      client.organizations(client.login).each do |hash|
+      client.organizations(username).each do |hash|
         names << hash.login
       end
     end
