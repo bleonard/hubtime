@@ -19,7 +19,7 @@ If things are generally messed up and you want to start again, clear it all
 
     ./hubtime.rb clear all
     
-To show table of commits and such
+#### To show table of commits and such
 
     ./hubtime.rb table
     ./hubtime.rb table --months 3
@@ -45,7 +45,7 @@ To show table of commits and such
     | 2012-12 | 123     | 21099  | 13897     | 7202      |
     +---------+---------+--------+-----------+-----------+
 
-Graph a piece of data
+#### Graph a piece of data
 
     ./hubtime.rb graph
     ./hubtime.rb graph impact
@@ -53,31 +53,35 @@ Graph a piece of data
     ./hubtime.rb graph additions --user otherlogin
     
     ./hubtime.rb graph commits --months 3
-    < launches HTML file of graph >
+
+![Commit Graph](https://raw.github.com/bleonard/hubtime/master/readme/graph.png)
     
-All of those work with a stacked graph to see if broken up by repository
+#### All of those work with a stacked graph to see if broken up by repository
 
     ./hubtime.rb graph --stacked
     
     ./hubtime.rb graph impact --stacked
-    < launches HTML file of graph >
     
-Impact Graph like on Github
+![Stacked Graph](https://raw.github.com/bleonard/hubtime/master/readme/stacked.png)
+    
+#### Impact Graph like on Github
 
     ./hubtime.rb impact
     
     ./hubtime.rb impact --months 12
-    < launches HTML file of graph >
+
+![Stacked Graph](https://raw.github.com/bleonard/hubtime/master/readme/impact.png)
     
-Pie chart of repositories
+#### Pie chart of repositories
 
     ./hubtime.rb pie
     ./hubtime.rb pie impact
     
     ./hubtime.rb pie --months 3
-    < launches HTML file of graph >
+
+![Stacked Graph](https://raw.github.com/bleonard/hubtime/master/readme/pie.png)
     
-Sparklines in the console
+#### Sparklines in the console
 
     ./hubtime.rb spark
     ./hubtime.rb spark commits
