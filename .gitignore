@@ -1,3 +1,4 @@
 data
 .DS_Store
-config.yml
+hubtime_config.yml
+.rvmrc
