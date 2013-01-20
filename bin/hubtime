@@ -1,25 +1,10 @@
 #!/usr/bin/env ruby
 
-require 'rubygems'
-require 'active_support'
-require 'active_support/all'
 require 'commander/import'
-require 'terminal-table'
-require 'fileutils'
-require 'yaml'
-require 'erubis'
-require 'hashie'
-require 'octokit'
+require 'hubtime'
 
-load 'cacher.rb'
-load 'hub_config.rb'
-load 'commit.rb'
-load 'github.rb'
-load 'activity.rb'
-load 'repo.rb'
-
-
-program :version, '0.0.1'
+program :name, 'hubtime'
+program :version, Hubtime::VERSION
 program :description, 'See activity on Github.'
  
 command :impact do |c|
@@ -31,7 +16,7 @@ command :impact do |c|
   c.option '--user USERNAME', 'Which Github user'
   c.action do |args, options|
     options.default :months => 12
-    activity = Activity.new(self, options.user, options.months)
+    activity = Hubtime::Activity.new(self, options.user, options.months)
     file = activity.impact
     puts "saved: #{file}"
     `open #{file}`
@@ -52,7 +37,7 @@ command :graph do |c|
     type = args.first
     type ||= "commits"
     type = "count" if type == "commits"
-    activity = Activity.new(self, options.user, options.months)
+    activity = Hubtime::Activity.new(self, options.user, options.months)
     file = activity.graph(type, options.stacked.present?)
     puts "saved: #{file}"
     `open #{file}`
@@ -72,7 +57,7 @@ command :pie do |c|
     type = args.first
     type ||= "commits"
     type = "count" if type == "commits"
-    activity = Activity.new(self, options.user, options.months)
+    activity = Hubtime::Activity.new(self, options.user, options.months)
     file = activity.pie(type)
     puts "saved: #{file}"
     `open #{file}`
@@ -90,7 +75,7 @@ command :table do |c|
   c.action do |args, options|
     options.default :months => 12
     options.default :unit => "month"
-    activity = Activity.new(self, options.user, options.months)
+    activity = Hubtime::Activity.new(self, options.user, options.months)
     puts activity.table(options.unit)
   end
 end
@@ -110,8 +95,8 @@ command :spark do |c|
     type = args.first
     type ||= "commits"
     type = "count" if type == "commits"
-    
-    activity = Activity.new(self, options.user, options.months)
+
+    activity = Hubtime::Activity.new(self, options.user, options.months)
     puts activity.spark(options.unit, type)
   end
 end
@@ -127,19 +112,19 @@ command :config do |c|
     if options.password || options.user
       raise("Need password") unless options.password
       raise("Need github user name") unless options.user
-      HubConfig.store(options.user, options.password)
+      Hubtime::HubConfig.store(options.user, options.password)
       puts "Set config..."
     else
       puts "Current config..."
     end
-    
-    puts "  Username: #{HubConfig.user}"
-    puts "  Password: #{HubConfig.display_password}"
-    
+
+    puts "  Username: #{Hubtime::HubConfig.user}"
+    puts "  Password: #{Hubtime::HubConfig.display_password}"
+
     unless options.password || options.user
       puts "To set, use command: hubtime config --user USERNAME --password PASSWORD" 
     end
-    
+
     puts ""
   end
 end
@@ -151,21 +136,21 @@ command :auth do |c|
   c.action do |args, options|
     username = ask("Github Username: ")
     password = ask("Github Password: ") { |q| q.echo = "*" }
-    
+
     raise "Need a username" if username.blank?
     raise "Need a password" if password.blank?
-    
-    HubConfig.auth(username, password)
-    
+
+    Hubtime::HubConfig.auth(username, password)
+
     puts "Current auth..."
-    
-    puts "  Username: #{HubConfig.user}"
-    puts "  Password: #{HubConfig.display_password}"
-    
+
+    puts "  Username: #{Hubtime::HubConfig.user}"
+    puts "  Password: #{Hubtime::HubConfig.display_password}"
+
     unless options.password || options.user
       puts "To set directly, use command: hubtime config --user USERNAME --password PASSWORD" 
     end
-    
+
     puts ""
   end
 end
@@ -177,12 +162,12 @@ command :ignore do |c|
   c.example 'description', 'hubtime ignore bleonard/rails'
   c.action do |args, options|
     if args.first
-      HubConfig.add_ignore(args.first)
-      Cacher.clear("activity")  # different repos
-      Cacher.clear("charts")
+      Hubtime::HubConfig.add_ignore(args.first)
+      Hubtime::Cacher.clear("activity")  # different repos
+      Hubtime::Cacher.clear("charts")
     end
-    
-    puts "Current ignore list: #{HubConfig.ignore.join(", ")}"
+
+    puts "Current ignore list: #{Hubtime::HubConfig.ignore.join(", ")}"
     puts "This list can be edited in the config.yml"
   end
 end
@@ -195,7 +180,7 @@ command :clear do |c|
   c.action do |args, options|
     args << "activity" if args.size == 0
     args.each do |item|
-      Cacher.clear(item)
+      Hubtime::Cacher.clear(item)
     end
   end
 end
@@ -206,8 +191,8 @@ command :repositories do |c|
   c.option '--user USERNAME', 'Github user name'
   c.action do |args, options|
     user = options.user
-    user ||= HubConfig.user
-    GithubService.owner.repositories(user).each do |name|
+    user ||= Hubtime::HubConfig.user
+    Hubtime::GithubService.owner.repositories(user).each do |name|
       puts name
     end
   end
