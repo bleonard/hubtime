@@ -9,3 +9,5 @@ gem 'octokit'
 gem 'terminal-table'
 gem 'erubis'
 gem 'hashie'
+
+gemspec

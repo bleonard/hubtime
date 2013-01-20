@@ -1,3 +1,16 @@
+PATH
+  remote: .
+  specs:
+    hubtime (0.0.1)
+      active_support (~> 3.0)
+      commander (~> 4.1)
+      erubis (~> 2.7)
+      hashie (~> 1.2)
+      i18n (~> 0.6)
+      octokit (~> 1.20)
+      terminal-table (~> 1.4)
+      tzinfo (~> 0.3)
+
 GEM
   remote: http://rubygems.org/
   specs:
@@ -36,6 +49,7 @@ DEPENDENCIES
   commander
   erubis
   hashie
+  hubtime!
   i18n
   octokit
   terminal-table

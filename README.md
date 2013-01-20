@@ -101,3 +101,9 @@ If things are generally messed up and you want to start again, clear it all
     hubtime spark impact
     ▄▂▂▂▅▁▁▁▇▇▄▃
     
+#### Development
+
+I use rvm and bundler. Check out this repo and `bundle install` to get started.
+All of the above commands would need `bundle exec` prepended to work in development.
+    
+
