@@ -4,36 +4,42 @@ I wanted to be able to see how things went this year, but Github didn't give a g
 
 ### Commands
 
+First, you need to install the gem:
+
+    gem install hubtime
+
+Note: `hubtime` will add the file `hubtime_config.yml` and the directory `data` on the directory you run the command.
+
 To give auth (It will store your password encrypted on disk)
 
-    ./hubtime.rb auth
+    hubtime auth
 
 To see what repositiories it will pull from
 
-    ./hubtime.rb repositories
+    hubtime repositories
     
 To ignore some of those
 
-    ./hubtime.rb ignore bleonard/rails
+    hubtime ignore bleonard/rails
     
 Caching is heavily used to not kill Github and speed things up. Caching is done at the sha, time window per repo, and the full history levels.
 Specifically, if you add another repo or something, you'll want to do this
 
-    ./hubtime.rb clear activity
+    hubtime clear activity
 
 If things are generally messed up and you want to start again, clear it all
 
-    ./hubtime.rb clear all
+    hubtime clear all
     
 #### To show table of commits and such
 
-    ./hubtime.rb table
-    ./hubtime.rb table --months 3
-    ./hubtime.rb table --unit day
-    ./hubtime.rb table --unit day --months 1
-    ./hubtime.rb table --unit year
+    hubtime table
+    hubtime table --months 3
+    hubtime table --unit day
+    hubtime table --unit day --months 1
+    hubtime table --unit year
     
-    ./hubtime.rb table --unit month
+    hubtime table --unit month
     +---------+---------+--------+-----------+-----------+
     | Month   | Commits | Impact | Additions | Deletions |
     +---------+---------+--------+-----------+-----------+
@@ -53,45 +59,45 @@ If things are generally messed up and you want to start again, clear it all
 
 #### Graph a piece of data
 
-    ./hubtime.rb graph
-    ./hubtime.rb graph impact
-    ./hubtime.rb graph deletions
-    ./hubtime.rb graph additions --user otherlogin
+    hubtime graph
+    hubtime graph impact
+    hubtime graph deletions
+    hubtime graph additions --user otherlogin
     
-    ./hubtime.rb graph commits --months 3
+    hubtime graph commits --months 3
 
 ![Commit Graph](https://raw.github.com/bleonard/hubtime/master/readme/graph.png)
     
 #### All of those work with a stacked graph to see if broken up by repository
 
-    ./hubtime.rb graph --stacked
+    hubtime graph --stacked
     
-    ./hubtime.rb graph impact --stacked
+    hubtime graph impact --stacked
     
 ![Stacked Graph](https://raw.github.com/bleonard/hubtime/master/readme/stacked.png)
     
 #### Impact Graph like on Github
 
-    ./hubtime.rb impact
+    hubtime impact
     
-    ./hubtime.rb impact --months 12
+    hubtime impact --months 12
 
 ![Stacked Graph](https://raw.github.com/bleonard/hubtime/master/readme/impact.png)
     
 #### Pie chart of repositories
 
-    ./hubtime.rb pie
-    ./hubtime.rb pie impact
+    hubtime pie
+    hubtime pie impact
     
-    ./hubtime.rb pie --months 3
+    hubtime pie --months 3
 
 ![Stacked Graph](https://raw.github.com/bleonard/hubtime/master/readme/pie.png)
     
 #### Sparklines in the console
 
-    ./hubtime.rb spark
-    ./hubtime.rb spark commits
+    hubtime spark
+    hubtime spark commits
     
-    ./hubtime.rb spark impact
+    hubtime spark impact
     ▄▂▂▂▅▁▁▁▇▇▄▃
     
