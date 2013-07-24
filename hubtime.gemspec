@@ -24,5 +24,4 @@ Gem::Specification.new do |s|
   s.add_dependency("octokit", "~> 1.20")
   s.add_dependency("terminal-table", "~> 1.4")
   s.add_dependency("erubis", "~> 2.7")
-  s.add_dependency("hashie", "~> 1.2")
 end
