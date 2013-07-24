@@ -3,3 +3,4 @@ data
 hubtime_config.yml
 .rvmrc
 *.gem
+Gemfile.lock
