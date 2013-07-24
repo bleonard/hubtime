@@ -17,7 +17,7 @@ Gem::Specification.new do |s|
   s.files         = `git ls-files`.split("\n")
   s.require_paths = ["lib"]
 
-  s.add_dependency("active_support", "~> 3.0")
+  s.add_dependency("activesupport", "~> 3.0")
   s.add_dependency("commander", "~> 4.1")
   s.add_dependency("i18n", "~> 0.6")
   s.add_dependency("tzinfo", "~> 0.3")
