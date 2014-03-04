@@ -26,7 +26,7 @@ module Hubtime
     end
 
     def self.display_password
-      '*' * password.size
+      '*' * (password || "").size
     end
 
     def self.ignore
