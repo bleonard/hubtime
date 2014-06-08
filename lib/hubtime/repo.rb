@@ -1,5 +1,6 @@
 # -*- encoding : utf-8 -*-
 
+require 'hashie'
 require 'thread'
 
 module Hubtime
@@ -77,13 +78,23 @@ module Hubtime
 
     def single_window_check
       # pagination doesn't work, see if there are even 100 over the whole window
-      options = { :author => username }
-      options[:since] = start_time.iso8601
-      options[:until] = end_time.iso8601
+      options = {}
+      options[:author] = username unless username == "all"
+      options[:since]  = start_time.iso8601
+      options[:until]  = end_time.iso8601
       options[:per_page] = 100
       options[:page] = 1
 
-      commits = single_client.commits(repo_name, "master", options)
+      commits = []
+
+      begin
+        commits = single_client.commits(repo_name, "master", options)
+      rescue Octokit::NotFound => e
+        # happens on some repos, not sure why
+        puts "NOT FOUND: #{e.message}"
+        commits = []
+      end
+      
       return if commits.size >= 100 # go slower
 
       result = []
@@ -138,12 +149,22 @@ module Hubtime
         return cached
       end
 
-      options = { :author => username }
-      options[:since] = since_time.iso8601
-      options[:until] = until_time.iso8601
+      options = {}
+      options[:author] = username unless username == "all"
+      options[:since]  = since_time.iso8601
+      options[:until]  = until_time.iso8601
 
       result = []
-      commits = auto_client.commits(repo_name, "master", options)
+      commits = []
+
+      begin
+        commits = auto_client.commits(repo_name, "master", options)
+      rescue Octokit::NotFound => e
+        # happens on some repos, not sure why
+        puts "NOT FOUND: #{e.message}"
+        commits = []
+      end
+
       commits.each do |hash|
         next unless hash.is_a?(Hashie::Mash)
         next unless hash.sha

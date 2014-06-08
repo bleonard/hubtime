@@ -4,13 +4,14 @@ module Hubtime
   class Activity
     class Period
       attr_reader :example, :label, :compiled, :children
-      attr_reader :total_stats, :repo_stats
+      attr_reader :total_stats, :repo_stats, :user_stats
       def initialize(label, example_time=nil)
         @example = example_time
         @label = label
         @children = {}
         @total_stats = default_stats
         @repo_stats  = Hash.new{ |hash, key| hash[key] = default_stats }
+        @user_stats  = Hash.new{ |hash, key| hash[key] = default_stats }
         @compiled = nil
       end
 
@@ -21,6 +22,9 @@ module Hubtime
         end
         self.repo_stats[commit.repo_name].keys.each do |key|
           self.repo_stats[commit.repo_name][key] += commit.send(key)
+        end
+        self.user_stats[commit.committer].keys.each do |key|
+          self.user_stats[commit.committer][key] += commit.send(key)
         end
   
         if self.class.child_class
@@ -62,6 +66,7 @@ module Hubtime
         @compiled = {}
         @compiled["total_stats"] = self.total_stats
         @compiled["repo_stats"]  = self.repo_stats
+        @compiled["user_stats"]  = self.user_stats
 
         @compiled["children"] = {}
         @children.each do |key, period|
@@ -74,6 +79,7 @@ module Hubtime
         @compiled    = stats
         @total_stats = stats["total_stats"]
         @repo_stats  = stats["repo_stats"]
+        @user_stats  = stats["user_stats"]
         @children = {}
         child_list.each do |key, child_stats|
           @children[key] = self.class.child_class.new(key)
@@ -89,28 +95,36 @@ module Hubtime
         repo_stats.keys
       end
 
-      def count(repo=nil)
-        key_value("count", repo)
+      def users
+        user_stats.keys
       end
 
-      def additions(repo=nil)
-        key_value("additions", repo)
+      def count(stacked=nil, name=nil)
+        key_value("count", stacked, name)
       end
 
-      def deletions(repo=nil)
-        key_value("deletions", repo)
+      def additions(stacked=nil, name=nil)
+        key_value("additions", stacked, name)
       end
 
-      def impact(repo=nil)
-        key_value("impact", repo)
+      def deletions(stacked=nil, name=nil)
+        key_value("deletions", stacked, name)
       end
 
-      def key_value(key, repo = nil)
-        if repo.nil? || repo == "total"
-          hash = total_stats
+      def impact(stacked=nil, name=nil)
+        key_value("impact", stacked, name)
+      end
+
+      def key_value(key, stacked=nil, name=nil)
+        case stacked
+        when "repo"
+          hash = repo_stats[name]
+        when "user"
+          hash = user_stats[name]
         else
-          hash = repo_stats[repo]
+          hash = total_stats
         end
+
         return 0 unless hash
         hash[key.to_s]
       end
@@ -309,6 +323,10 @@ module Hubtime
       table = Terminal::Table.new(:headings => [unit.to_s.titleize, 'Commits', 'Impact', 'Additions', 'Deletions'])
 
       @time.each(unit) do |label, period|
+        parsed = Time.parse(label)
+        next  if parsed.beginning_of_day < start_time
+        break if parsed.end_of_day > end_time
+
         table.add_row [label, period.count, period.impact, period.additions, period.deletions]
       end
       table
@@ -318,6 +336,10 @@ module Hubtime
       compile!
       data = []
       @time.each(unit) do |label, period|
+        parsed = Time.parse(label)
+        next  if parsed.beginning_of_day < start_time
+        break if parsed.end_of_day > end_time
+
         data << period.send(type)
       end
 
@@ -356,6 +378,10 @@ module Hubtime
 
       day = 0
       @time.each(:day) do |label, period|
+        parsed = Time.parse(label)
+        next  if parsed.beginning_of_day < start_time
+        break if parsed.end_of_day > end_time
+
         day += 1
         week_label ||= label
         week_additions += period.additions
@@ -401,7 +427,7 @@ module Hubtime
       default_week
     end
 
-    def graph(type = :impact, stacked=false)
+    def graph(type = :impact, stacked=nil)
       compile!
 
       type = type.to_s
@@ -412,9 +438,13 @@ module Hubtime
       labels = []
 
       data   = {}
-      if stacked
+      case stacked
+      when "repo"
         keys = @time.repositories
+      when "user"
+        keys = @time.users
       else
+        stacked = "unstacked"
         keys = ["total"]
       end
 
@@ -427,10 +457,14 @@ module Hubtime
       week_label = nil
       day = 0
       @time.each(:day) do |label, period|
+        parsed = Time.parse(label)
+        next  if parsed.beginning_of_day < start_time
+        break if parsed.end_of_day > end_time
+
         day += 1
         week_label ||= label
         keys.each do |key|
-          week[key]["data"]  += period.send(type, key)
+          week[key]["data"] += period.send(type, stacked, key)
         end
         week_other += period.send(other)
 
@@ -458,7 +492,7 @@ module Hubtime
       html = template.result(:data => data, :other => others, :labels => labels, :data_type => type, :other_type => other, :username => username)
 
       root = File.join(File.expand_path("."), "data", "charts")
-      path = "#{username}-graph-#{type}-#{start_time.to_i}-#{end_time.to_i}.html"
+      path = "#{username}-graph-#{type}-#{stacked}-#{start_time.to_i}-#{end_time.to_i}.html"
       file_name = File.join(root, path)
       directory = File.dirname(file_name)
       FileUtils.mkdir_p(directory) unless File.exist?(directory)
@@ -466,24 +500,33 @@ module Hubtime
       file_name
     end
 
-    def pie(type = :impact)
+    def pie(type = :impact, stacked=nil)
       compile!
 
       type = type.to_s
       data   = []
 
-      @time.repositories.each do |repo_name|
-        value = @time.send(type, repo_name)
-        data << [repo_name, value] if value > 0
+      case stacked
+      when "user"
+        @time.users.each do |user|
+          value = @time.send(type, "user", user)
+          data << [user, value] if value > 0
+        end
+      else # repo
+        stacked = "repo"
+        @time.repositories.each do |repo_name|
+          value = @time.send(type, "repo", repo_name)
+          data << [repo_name, value] if value > 0
+        end
       end
 
       charts = File.join(File.dirname(__FILE__), "charts")
       template = File.read(File.join(charts, "pie.erb"))
       template = Erubis::Eruby.new(template)
-      html = template.result(:data => data, :data_type => type, :username => username)
+      html = template.result(:data => data, :data_type => type, :username => username, :stacked => stacked)
 
       root = File.join(File.expand_path("."), "data", "charts")
-      path = "#{username}-pie-#{type}-#{start_time.to_i}-#{end_time.to_i}.html"
+      path = "#{username}-pie-#{type}-#{stacked}-#{start_time.to_i}-#{end_time.to_i}.html"
       file_name = File.join(root, path)
       directory = File.dirname(file_name)
       FileUtils.mkdir_p(directory) unless File.exist?(directory)
