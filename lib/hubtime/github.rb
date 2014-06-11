@@ -7,9 +7,10 @@ module Hubtime
       @owner ||= self.new
     end
 
-    attr_reader :client
+    attr_reader :client, :cacher
     def initialize
       @client = Octokit::Client.new(:login => HubConfig.user, :password => HubConfig.password, :auto_traversal => true)
+      @cacher = Cacher.new("github")
       # puts @client.ratelimit_remaining
     end
 
@@ -24,22 +25,31 @@ module Hubtime
     end
 
     def repositories(username)
-      repos = []
+      cache_key = "#{username}/repositories/#{Time.now.strftime('%Y%m%d')}"
+      repos = cacher.read(cache_key)
 
-      client.repositories.each do |hash|
-        repos << hash.full_name
-      end
+      if !repos
+        repos = []
 
-      unless username == client.login
-        client.repositories(username).each do |hash|
+        username = client.login if username == "all"
+
+        client.repositories.each do |hash|
           repos << hash.full_name
         end
-      end
 
-      self.organizations(username).each do |org_name|
-        client.organization_repositories(org_name).each do |hash|
-          repos << hash.full_name
+        unless username == client.login
+          client.repositories(username).each do |hash|
+            repos << hash.full_name
+          end
         end
+
+        self.organizations(username).each do |org_name|
+          client.organization_repositories(org_name).each do |hash|
+            repos << hash.full_name
+          end
+        end
+
+        cacher.write(cache_key, repos)
       end
 
       # return these, ignoring requested ones
@@ -49,10 +59,19 @@ module Hubtime
     protected
 
     def organizations(username)
-      names = []
+      cache_key = "#{username}/organizations/#{Time.now.strftime('%Y%m%d')}"
+      names = cacher.read(cache_key)
 
-      client.organizations.each do |hash|
-        names << hash.login
+      if !names
+        names = []
+
+        username = client.login if username == "all"
+
+        client.organizations.each do |hash|
+          names << hash.login
+        end
+
+        cacher.write(cache_key, names.compact.uniq)
       end
 
       unless username == client.login

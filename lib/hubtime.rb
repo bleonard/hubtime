@@ -5,6 +5,8 @@ require 'fileutils'
 require 'yaml'
 require 'erubis'
 require 'hashie'
+Hashie::Mash # for some reason, there are load issue later if i don't do this
+
 require 'octokit'
 
 require 'hubtime/version'

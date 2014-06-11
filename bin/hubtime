@@ -31,14 +31,26 @@ command :graph do |c|
   c.option '--months INTEGER', 'How many months of history'
   c.option '--user USERNAME', 'Which Github user'
   c.option '--stacked', 'To see data by repository'
+  c.option '--users', 'To see data stacked by user'
   c.action do |args, options|
     options.default :months => 12
     options.default :data => "count"
+
+    username = options.user
+    if options.users.present?
+      username = "all"
+      stack = "user"
+    elsif options.stacked.present?
+      stack = "repo"
+    else
+      stack = nil
+    end
+
     type = args.first
     type ||= "commits"
     type = "count" if type == "commits"
-    activity = Hubtime::Activity.new(self, options.user, options.months)
-    file = activity.graph(type, options.stacked.present?)
+    activity = Hubtime::Activity.new(self, username, options.months)
+    file = activity.graph(type, stack)
     puts "saved: #{file}"
     `open #{file}`
   end
@@ -51,14 +63,23 @@ command :pie do |c|
   c.example 'description', 'command example'
   c.option '--months INTEGER', 'How many months of history'
   c.option '--user USERNAME', 'Which Github user'
+  c.option '--users', 'To see data stacked by user instead of repos'
   c.action do |args, options|
     options.default :months => 12
-    options.default :data => "count"
     type = args.first
     type ||= "commits"
     type = "count" if type == "commits"
-    activity = Hubtime::Activity.new(self, options.user, options.months)
-    file = activity.pie(type)
+
+    username = options.user
+    if options.users.present?
+      username = "all"
+      stack = "user"
+    else
+      stack = nil
+    end
+
+    activity = Hubtime::Activity.new(self, username, options.months)
+    file = activity.pie(type, stack)
     puts "saved: #{file}"
     `open #{file}`
   end
@@ -194,6 +215,37 @@ command :repositories do |c|
     user ||= Hubtime::HubConfig.user
     Hubtime::GithubService.owner.repositories(user).each do |name|
       puts name
+    end
+  end
+end
+
+
+command :poll do |c|
+  c.syntax = 'hubtime poll'
+  c.summary = ''
+  c.description = 'fetches every so foten until it is done'
+  c.example 'description', 'command example'
+  c.option '--months INTEGER', 'How many months of history'
+  c.option '--user USERNAME', 'Which Github user'
+  c.option '--sleep MINUTES', 'Sleep between tries'
+  c.action do |args, options|
+    options.default :months => 12
+    options.default :sleep  => 61
+    working = true
+    while(working)
+      begin
+        activity = Hubtime::Activity.new(self, options.user, options.months)
+        activity.compile!
+        working = false
+      rescue Exception => e
+        puts e.message
+        seconds = options.sleep*60
+        puts "Sleeping #{seconds}..."
+        seconds.times do
+          sleep(1)
+        end
+        working = true
+      end
     end
   end
 end

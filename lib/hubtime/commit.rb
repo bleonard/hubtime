@@ -1,5 +1,4 @@
 # -*- encoding : utf-8 -*-
-
 module Hubtime
   class Commit
     attr_reader :repo_name, :sha, :additions, :deletions, :committer, :time
@@ -8,8 +7,20 @@ module Hubtime
       @sha = hash["sha"]
       @additions = hash["stats"]["additions"].to_i
       @deletions = hash["stats"]["deletions"].to_i
-      @committer = committer  # or figure it out
+      @committer = committer
+      @committer = username_from_hash(hash) if !@committer || @committer == "all"
       @time = parse_time(hash)
+    end
+
+    def username_from_hash(hash)
+      out = nil
+      out = hash["author"]["login"] if out.blank? && hash["author"]
+      out = hash["commit"]["author"]["login"] if out.blank? && hash["commit"] && hash["commit"]["author"]
+      out = hash["author"]["email"] if out.blank? && hash["author"]
+      out = hash["commit"]["author"]["email"] if out.blank? && hash["commit"] && hash["commit"]["author"]
+      
+      out = "unknown" if out.blank?
+      out
     end
 
     def to_s
